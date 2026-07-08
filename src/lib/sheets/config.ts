@@ -71,6 +71,19 @@ export function getSpreadsheetId(): string {
   return spreadsheetId;
 }
 
+function normalizePrivateKey(raw: string): string {
+  let key = raw.trim();
+
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1);
+  }
+
+  return key.replace(/\\n/g, "\n");
+}
+
 export function getServiceAccountCredentials(): {
   clientEmail: string;
   privateKey: string;
@@ -86,7 +99,32 @@ export function getServiceAccountCredentials(): {
     throw new Error("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is not configured");
   }
 
-  const privateKey = privateKeyRaw.replace(/\\n/g, "\n");
+  const privateKey = normalizePrivateKey(privateKeyRaw);
+
+  if (!privateKey.includes("BEGIN PRIVATE KEY")) {
+    throw new Error(
+      "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY の形式が不正です。JSONキーの private_key を正しく設定してください。",
+    );
+  }
 
   return { clientEmail, privateKey };
+}
+
+export function getSheetsEnvDiagnostics(): {
+  hasSpreadsheetId: boolean;
+  hasServiceAccountEmail: boolean;
+  hasPrivateKey: boolean;
+  privateKeyFormatOk: boolean;
+  serviceAccountEmailLooksValid: boolean;
+} {
+  const privateKeyRaw = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.trim() ?? "";
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() ?? "";
+
+  return {
+    hasSpreadsheetId: Boolean(process.env.GOOGLE_SHEETS_SPREADSHEET_ID?.trim()),
+    hasServiceAccountEmail: Boolean(email),
+    hasPrivateKey: Boolean(privateKeyRaw),
+    privateKeyFormatOk: privateKeyRaw.includes("BEGIN PRIVATE KEY"),
+    serviceAccountEmailLooksValid: email.includes(".iam.gserviceaccount.com"),
+  };
 }

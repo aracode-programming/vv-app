@@ -218,8 +218,8 @@ export default function ItemForm({
             slotProps={{ inputLabel: { shrink: true } }}
             helperText={
               sortedOrders.length > 0
-                ? "Ordersシートの発注・交換イベントから選択"
-                : "発注履歴がありません（/orders で登録後に選択可能）"
+                ? "発注管理で登録した発注IDから選択"
+                : "先に発注管理ページで発注を登録してください"
             }
           >
             <MenuItem value="">未選択</MenuItem>

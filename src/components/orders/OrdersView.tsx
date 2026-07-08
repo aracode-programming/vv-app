@@ -6,8 +6,10 @@ import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
 
 import AiAnalysisRunner from "@/components/dashboard/AiAnalysisRunner";
+import OrderForm from "@/components/orders/OrderForm";
 import { OrderList } from "@/components/orders/OrderList";
 import { getLatestAnalytics, getOrders } from "@/lib/sheets";
+import { generateNextOrderId } from "@/lib/orders/rules";
 import { formatCurrency, formatNumber, formatYearMonth } from "@/lib/format";
 
 export default async function OrdersView() {
@@ -16,6 +18,7 @@ export default async function OrdersView() {
     getLatestAnalytics(),
   ]);
 
+  const nextOrderId = generateNextOrderId(orders.map((order) => order.eventId));
   const sortedOrders = [...orders].sort((a, b) =>
     b.eventDate.localeCompare(a.eventDate),
   );
@@ -37,6 +40,8 @@ export default async function OrdersView() {
             : ""}
         </Typography>
       </Box>
+
+      <OrderForm nextOrderId={nextOrderId} />
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid size={{ xs: 6, sm: 3 }}>

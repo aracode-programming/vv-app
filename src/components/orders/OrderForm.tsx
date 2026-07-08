@@ -52,7 +52,7 @@ export default function OrderForm({ nextOrderId }: OrderFormProps) {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr auto" },
+            gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" },
             gap: 2,
             alignItems: "start",
           }}
@@ -92,6 +92,34 @@ export default function OrderForm({ nextOrderId }: OrderFormProps) {
             }}
           />
 
+          <TextField
+            name="totalItemCost"
+            label="仕入れ値 (円)"
+            type="number"
+            required
+            fullWidth
+            placeholder="例: 25000"
+            sx={fieldSx}
+            slotProps={{
+              inputLabel: { shrink: true },
+              htmlInput: { min: 0, step: 1 },
+            }}
+          />
+
+          <TextField
+            name="shippingCost"
+            label="送料 (円)"
+            type="number"
+            required
+            fullWidth
+            placeholder="例: 1200"
+            sx={fieldSx}
+            slotProps={{
+              inputLabel: { shrink: true },
+              htmlInput: { min: 0, step: 1 },
+            }}
+          />
+
           <Button
             type="submit"
             variant="contained"
@@ -100,8 +128,8 @@ export default function OrderForm({ nextOrderId }: OrderFormProps) {
               minHeight: 48,
               px: 3,
               whiteSpace: "nowrap",
-              alignSelf: { xs: "stretch", sm: "flex-start" },
-              mt: { xs: 0, sm: 0 },
+              alignSelf: { xs: "stretch", md: "flex-start" },
+              mt: { xs: 0, md: 0 },
             }}
           >
             {isPending ? "登録中..." : "発注を登録"}

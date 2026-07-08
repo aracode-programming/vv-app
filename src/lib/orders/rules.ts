@@ -31,6 +31,22 @@ function parseRequiredPositiveInteger(
   return parsed;
 }
 
+function parseRequiredNonNegativeInteger(
+  value: FormDataEntryValue | null,
+  fieldName: string,
+): number {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${fieldName}は必須です。`);
+  }
+
+  const parsed = Number.parseInt(value.replace(/,/g, ""), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${fieldName}は0以上の整数で入力してください。`);
+  }
+
+  return parsed;
+}
+
 export function generateNextOrderId(existingIds: string[]): string {
   let maxNumber = 0;
 
@@ -51,15 +67,23 @@ export function buildOrderInputFromForm(
 ): OrderInput {
   const eventDate = parseRequiredString(formData.get("eventDate"), "届いた日付");
   const quantity = parseRequiredPositiveInteger(formData.get("quantity"), "枚数");
+  const totalItemCost = parseRequiredNonNegativeInteger(
+    formData.get("totalItemCost"),
+    "仕入れ値",
+  );
+  const shippingCost = parseRequiredNonNegativeInteger(
+    formData.get("shippingCost"),
+    "送料",
+  );
 
   return {
     eventId: options.eventId,
     eventDate,
     type: "仕入",
     quantity,
-    totalItemCost: null,
-    shippingCost: null,
-    totalCost: null,
+    totalItemCost,
+    shippingCost,
+    totalCost: totalItemCost + shippingCost,
     status: "完了",
   };
 }

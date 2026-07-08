@@ -14,6 +14,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 
+import ColorSwatch from "@/components/items/ColorSwatch";
 import ItemStatusChip from "@/components/items/ItemStatusChip";
 import type { Item } from "@/lib/sheets/types";
 
@@ -119,11 +120,9 @@ export default function ItemTable({ items, onCopy }: ItemTableProps) {
                   />
                 </TableCell>
                 <TableCell>
-                  <CopyableCell
-                    label="色味"
-                    value={item.color}
-                    onCopy={onCopy}
-                  />
+                  <Box sx={{ display: "flex", justifyContent: "center" }}>
+                    <ColorSwatch color={item.color} size={18} />
+                  </Box>
                 </TableCell>
                 <TableCell>
                   <CopyableCell label="年代" value={item.era} onCopy={onCopy} />

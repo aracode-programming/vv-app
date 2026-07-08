@@ -21,6 +21,7 @@ import {
   updateItemAction,
   type ItemActionState,
 } from "@/app/items/actions";
+import ColorSwatch from "@/components/items/ColorSwatch";
 import MercariDescriptionPanel from "@/components/items/MercariDescriptionPanel";
 import {
   getDefaultCostItem,
@@ -286,12 +287,25 @@ export default function ItemForm({
             value={color}
             onChange={(event) => setColor(event.target.value)}
             sx={fieldSx}
-            slotProps={{ inputLabel: { shrink: true } }}
+            slotProps={{
+              inputLabel: { shrink: true },
+              select: {
+                renderValue: (selected) => (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <ColorSwatch color={String(selected)} />
+                    <Typography variant="body2">{String(selected)}</Typography>
+                  </Box>
+                ),
+              },
+            }}
             helperText="売れやすさ分析に使用（Itemsシートの Color カラム）"
           >
             {COLOR_OPTIONS.map((option) => (
               <MenuItem key={option} value={option}>
-                {option}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <ColorSwatch color={option} />
+                  <Typography variant="body2">{option}</Typography>
+                </Box>
               </MenuItem>
             ))}
           </TextField>

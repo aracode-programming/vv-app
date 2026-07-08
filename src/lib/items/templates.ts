@@ -66,6 +66,38 @@ export const COLOR_OPTIONS = [
 
 export type ColorOption = (typeof COLOR_OPTIONS)[number];
 
+const MULTICOLOR_GRADIENT =
+  "linear-gradient(90deg, #ff4d4f 0%, #ff9f1a 16%, #ffd60a 32%, #52c41a 48%, #1677ff 64%, #722ed1 80%, #eb2f96 100%)";
+
+const COLOR_SWATCH_MAP: Record<string, string> = {
+  ブラック: "#1f1f1f",
+  ホワイト: "#ffffff",
+  オフホワイト: "#f5f5f0",
+  グレー: "#9e9e9e",
+  チャコール: "#4a4a4a",
+  ネイビー: "#1f3a63",
+  ブルー: "#1976d2",
+  ライトブルー: "#6ec6ff",
+  ベージュ: "#d6c5a1",
+  ブラウン: "#8d6e63",
+  カーキ: "#8b8f48",
+  グリーン: "#2e7d32",
+  オリーブ: "#6b8e23",
+  レッド: "#d32f2f",
+  バーガンディ: "#7b1f3a",
+  ピンク: "#ec407a",
+  イエロー: "#fbc02d",
+  オレンジ: "#f57c00",
+  パープル: "#8e24aa",
+  マルチカラー: MULTICOLOR_GRADIENT,
+  その他: "#90a4ae",
+};
+
+export function getColorSwatchBackground(color: string): string {
+  const normalized = color.trim();
+  return COLOR_SWATCH_MAP[normalized] ?? "#bdbdbd";
+}
+
 export type MercariCopyField = {
   label: string;
   value: string;

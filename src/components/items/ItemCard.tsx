@@ -10,6 +10,7 @@ import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 
+import ColorSwatch from "@/components/items/ColorSwatch";
 import CopyableField from "@/components/items/CopyableField";
 import ItemStatusChip from "@/components/items/ItemStatusChip";
 import { buildMercariCopyFields } from "@/lib/items/templates";
@@ -57,6 +58,7 @@ export default function ItemCard({ item, onCopy }: ItemCardProps) {
             >
               {item.sku}
             </Typography>
+            <ColorSwatch color={item.color} />
             <ItemStatusChip status={item.status} exchangeAlert={showAlert} />
             {showAlert ? (
               <WarningAmberIcon color="warning" sx={{ fontSize: 16 }} />

@@ -60,6 +60,7 @@ export default function ItemForm({
   nextSku,
   orders = [],
 }: ItemFormProps) {
+  const autoNameSku = mode === "create" ? nextSku ?? "" : item?.sku ?? "";
   const action =
     mode === "create"
       ? createItemAction
@@ -72,7 +73,7 @@ export default function ItemForm({
 
   const [category, setCategory] = useState(item?.category ?? "");
   const [itemName, setItemName] = useState(
-    item?.itemName ?? buildItemNameFromCategory(item?.category ?? ""),
+    item?.itemName ?? buildItemNameFromCategory(item?.category ?? "", autoNameSku),
   );
   const [itemNameTouched, setItemNameTouched] = useState(mode === "edit");
   const [orderId, setOrderId] = useState(item?.orderId ?? "");
@@ -93,9 +94,9 @@ export default function ItemForm({
 
   useEffect(() => {
     if (mode === "create" && !itemNameTouched) {
-      setItemName(buildItemNameFromCategory(category));
+      setItemName(buildItemNameFromCategory(category, autoNameSku));
     }
-  }, [category, itemNameTouched, mode]);
+  }, [autoNameSku, category, itemNameTouched, mode]);
 
   const handleAiSuggest = async () => {
     setAiError("");
@@ -339,7 +340,7 @@ export default function ItemForm({
             slotProps={{ inputLabel: { shrink: true } }}
             helperText={
               mode === "create"
-                ? "00's vintage {カテゴリ} アーカイブ グランジ y2k パンク（カテゴリ変更で自動生成）"
+                ? "00's vintage {カテゴリ} アーカイブ グランジ y2k パンク [管理番号]（カテゴリ変更で自動生成）"
                 : "編集時は保存済みの商品名を維持します。カテゴリ変更では自動上書きしません"
             }
           />

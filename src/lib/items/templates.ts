@@ -1,7 +1,12 @@
 /** VV指定のメルカリ商品名テンプレート */
-export function buildItemNameFromCategory(category: string): string {
+export function buildItemNameFromCategory(
+  category: string,
+  sku?: string,
+): string {
   const normalized = category.trim() || "アイテム";
-  return `00's vintage ${normalized} アーカイブ グランジ y2k パンク`;
+  const normalizedSku = sku?.trim();
+  const skuSuffix = normalizedSku ? ` [${normalizedSku}]` : "";
+  return `00's vintage ${normalized} アーカイブ グランジ y2k パンク${skuSuffix}`;
 }
 
 export const DEFAULT_ERA = "90's-00's";

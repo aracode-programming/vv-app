@@ -1,6 +1,7 @@
-import { SHEET_TABS } from "./config";
+import { ITEM_COLUMNS, PHOTO_COLUMNS, SHEET_TABS } from "./config";
 import {
   appendSheetValues,
+  buildRowRange,
   getSpreadsheetId,
   getSpreadsheetMetadata,
   readSheetValues,
@@ -10,12 +11,15 @@ import {
   assertAnalyticsHeaders,
   assertItemHeaders,
   assertOrderHeaders,
+  assertPhotoHeaders,
   mapAnalyticsToRow,
   mapItemToRow,
   mapOrderToRow,
+  mapPhotoToRow,
   mapRowToAnalytics,
   mapRowToItem,
   mapRowToOrder,
+  mapRowToPhoto,
 } from "./mappers";
 import type {
   Analytics,
@@ -24,6 +28,8 @@ import type {
   ItemInput,
   Order,
   OrderInput,
+  Photo,
+  PhotoInput,
   SheetsConnectionStatus,
 } from "./types";
 
@@ -119,6 +125,14 @@ export async function updateItem(
     color: updates.color ?? existing.color,
     era: updates.era ?? existing.era,
     size: updates.size ?? existing.size,
+    shoulderWidth: updates.shoulderWidth ?? existing.shoulderWidth,
+    chestWidth: updates.chestWidth ?? existing.chestWidth,
+    sleeveLength: updates.sleeveLength ?? existing.sleeveLength,
+    bodyLength: updates.bodyLength ?? existing.bodyLength,
+    material: updates.material ?? existing.material,
+    mercariDescription: updates.mercariDescription ?? existing.mercariDescription,
+    primaryImageUrl: updates.primaryImageUrl ?? existing.primaryImageUrl,
+    imageCount: updates.imageCount ?? existing.imageCount,
     status: updates.status ?? existing.status,
     initialPrice: updates.initialPrice ?? existing.initialPrice,
     dateListed: updates.dateListed ?? existing.dateListed,
@@ -138,7 +152,7 @@ export async function updateItem(
 
   await updateSheetValues(
     SHEET_TABS.ITEMS,
-    `A${existing.rowNumber}:W${existing.rowNumber}`,
+    buildRowRange(SHEET_TABS.ITEMS, existing.rowNumber, ITEM_COLUMNS.length),
     [mapItemToRow(nextItem)],
   );
 
@@ -237,4 +251,62 @@ export async function upsertAnalytics(
 export async function getExchangeAlertItems(): Promise<Item[]> {
   const items = await getItems();
   return items.filter((item) => item.exchangeAlert);
+}
+
+export async function getPhotos(): Promise<Photo[]> {
+  try {
+    const values = await readSheetValues(SHEET_TABS.PHOTOS);
+    const { headers, rows } = splitHeaderAndRows(values);
+    const headerIndex = assertPhotoHeaders(headers);
+
+    return rows.map((row, index) =>
+      mapRowToPhoto(row, headerIndex, index + 2),
+    );
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message.includes("Photos シート") ||
+        error.message.includes("Unable to parse range"))
+    ) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+export async function getPhotosBySku(sku: string): Promise<Photo[]> {
+  const photos = await getPhotos();
+  return photos
+    .filter((photo) => photo.sku === sku)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export async function createPhoto(photo: PhotoInput): Promise<Photo> {
+  const values = await readSheetValues(SHEET_TABS.PHOTOS);
+  const { headers } = splitHeaderAndRows(values);
+  assertPhotoHeaders(headers);
+
+  await appendSheetValues(SHEET_TABS.PHOTOS, [mapPhotoToRow(photo)]);
+
+  const photos = await getPhotosBySku(photo.sku);
+  const created = photos.find((item) => item.photoId === photo.photoId);
+  if (!created) {
+    throw new Error(`写真 ${photo.photoId} の登録に失敗しました。`);
+  }
+
+  return created;
+}
+
+export async function deletePhotoById(photoId: string): Promise<void> {
+  const photos = await getPhotos();
+  const target = photos.find((photo) => photo.photoId === photoId);
+  if (!target) {
+    throw new Error(`写真 ${photoId} が見つかりません。`);
+  }
+
+  await updateSheetValues(
+    SHEET_TABS.PHOTOS,
+    buildRowRange(SHEET_TABS.PHOTOS, target.rowNumber, PHOTO_COLUMNS.length),
+    [new Array(PHOTO_COLUMNS.length).fill("")],
+  );
 }

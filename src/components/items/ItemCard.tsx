@@ -83,6 +83,23 @@ export default function ItemCard({ item, onCopy }: ItemCardProps) {
           タップでコピー（メルカリ出品用）
         </Typography>
 
+        {item.primaryImageUrl ? (
+          <Box
+            component="img"
+            src={item.primaryImageUrl}
+            alt={`${item.sku} thumbnail`}
+            sx={{
+              width: "100%",
+              maxHeight: 180,
+              objectFit: "cover",
+              borderRadius: 1,
+              mb: 1,
+              border: 1,
+              borderColor: "divider",
+            }}
+          />
+        ) : null}
+
         {copyFields.map((field) => (
           <CopyableField
             key={field.label}

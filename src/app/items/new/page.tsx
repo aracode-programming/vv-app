@@ -1,7 +1,7 @@
 import ItemForm from "@/components/items/ItemForm";
 import AppShell from "@/components/layout/AppShell";
 import { generateNextSku } from "@/lib/items/rules";
-import { getItems, getOrders } from "@/lib/sheets";
+import { getItems, getOrders, getPhotosBySku } from "@/lib/sheets";
 import Typography from "@mui/material/Typography";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function NewItemPage() {
   const [items, orders] = await Promise.all([getItems(), getOrders()]);
   const nextSku = generateNextSku(items.map((item) => item.sku));
+  const photos = await getPhotosBySku(nextSku);
 
   return (
     <AppShell title="商品登録">
@@ -24,6 +25,7 @@ export default async function NewItemPage() {
         existingItemCount={items.length}
         nextSku={nextSku}
         orders={orders}
+        photos={photos}
       />
     </AppShell>
   );

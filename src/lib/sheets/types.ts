@@ -19,6 +19,14 @@ export type Item = {
   color: string;
   era: string;
   size: string;
+  shoulderWidth: number | null;
+  chestWidth: number | null;
+  sleeveLength: number | null;
+  bodyLength: number | null;
+  material: string;
+  mercariDescription: string;
+  primaryImageUrl: string;
+  imageCount: number | null;
   status: ItemStatus;
   initialPrice: number | null;
   dateListed: string;
@@ -51,6 +59,19 @@ export type Order = {
 };
 
 export type OrderInput = Omit<Order, "rowNumber">;
+
+export type Photo = {
+  photoId: string;
+  sku: string;
+  objectPath: string;
+  publicUrl: string;
+  sortOrder: number;
+  isPrimary: boolean;
+  uploadedAt: string;
+  rowNumber: number;
+};
+
+export type PhotoInput = Omit<Photo, "rowNumber">;
 
 export type Analytics = {
   yearMonth: string;

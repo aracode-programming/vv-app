@@ -2,6 +2,7 @@ export const SHEET_TABS = {
   ITEMS: "Items",
   ORDERS: "Orders",
   ANALYTICS: "Analytics",
+  PHOTOS: "Photos",
 } as const;
 
 export type SheetTabName = (typeof SHEET_TABS)[keyof typeof SHEET_TABS];
@@ -16,6 +17,14 @@ export const ITEM_COLUMNS = [
   "Color",
   "Era",
   "Size",
+  "Shoulder_Width",
+  "Chest_Width",
+  "Sleeve_Length",
+  "Body_Length",
+  "Material",
+  "Mercari_Description",
+  "Primary_Image_URL",
+  "Image_Count",
   "Status",
   "Initial_Price",
   "Date_Listed",
@@ -59,9 +68,20 @@ export const ANALYTICS_COLUMNS = [
   "AI_Insights",
 ] as const;
 
+export const PHOTO_COLUMNS = [
+  "Photo_ID",
+  "SKU",
+  "Object_Path",
+  "Public_URL",
+  "Sort_Order",
+  "Is_Primary",
+  "Uploaded_At",
+] as const;
+
 export type ItemColumn = (typeof ITEM_COLUMNS)[number];
 export type OrderColumn = (typeof ORDER_COLUMNS)[number];
 export type AnalyticsColumn = (typeof ANALYTICS_COLUMNS)[number];
+export type PhotoColumn = (typeof PHOTO_COLUMNS)[number];
 
 export function getSpreadsheetId(): string {
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID?.trim();

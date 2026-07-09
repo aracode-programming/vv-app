@@ -2,8 +2,9 @@ import {
   ANALYTICS_COLUMNS,
   ITEM_COLUMNS,
   ORDER_COLUMNS,
+  PHOTO_COLUMNS,
 } from "./config";
-import type { Analytics, Item, Order } from "./types";
+import type { Analytics, Item, Order, Photo } from "./types";
 
 type ColumnKey<T extends readonly string[]> = T[number];
 
@@ -86,6 +87,14 @@ export function mapRowToItem(
     color: getCellValue(row, headerIndex, "Color"),
     era: getCellValue(row, headerIndex, "Era"),
     size: getCellValue(row, headerIndex, "Size"),
+    shoulderWidth: parseNumber(getCellValue(row, headerIndex, "Shoulder_Width")),
+    chestWidth: parseNumber(getCellValue(row, headerIndex, "Chest_Width")),
+    sleeveLength: parseNumber(getCellValue(row, headerIndex, "Sleeve_Length")),
+    bodyLength: parseNumber(getCellValue(row, headerIndex, "Body_Length")),
+    material: getCellValue(row, headerIndex, "Material"),
+    mercariDescription: getCellValue(row, headerIndex, "Mercari_Description"),
+    primaryImageUrl: getCellValue(row, headerIndex, "Primary_Image_URL"),
+    imageCount: parseNumber(getCellValue(row, headerIndex, "Image_Count")),
     status: getCellValue(row, headerIndex, "Status"),
     initialPrice: parseNumber(getCellValue(row, headerIndex, "Initial_Price")),
     dateListed: getCellValue(row, headerIndex, "Date_Listed"),
@@ -124,6 +133,23 @@ export function mapRowToOrder(
     shippingCost: parseNumber(getCellValue(row, headerIndex, "Shipping_Cost")),
     totalCost: parseNumber(getCellValue(row, headerIndex, "Total_Cost")),
     status: getCellValue(row, headerIndex, "Status"),
+    rowNumber,
+  };
+}
+
+export function mapRowToPhoto(
+  row: string[],
+  headerIndex: Map<string, number>,
+  rowNumber: number,
+): Photo {
+  return {
+    photoId: getCellValue(row, headerIndex, "Photo_ID"),
+    sku: getCellValue(row, headerIndex, "SKU"),
+    objectPath: getCellValue(row, headerIndex, "Object_Path"),
+    publicUrl: getCellValue(row, headerIndex, "Public_URL"),
+    sortOrder: parseNumber(getCellValue(row, headerIndex, "Sort_Order")) ?? 0,
+    isPrimary: parseBoolean(getCellValue(row, headerIndex, "Is_Primary")),
+    uploadedAt: getCellValue(row, headerIndex, "Uploaded_At"),
     rowNumber,
   };
 }
@@ -180,6 +206,14 @@ export function mapItemToRow(item: Omit<Item, "rowNumber">): string[] {
     item.color,
     item.era,
     item.size,
+    formatNumber(item.shoulderWidth),
+    formatNumber(item.chestWidth),
+    formatNumber(item.sleeveLength),
+    formatNumber(item.bodyLength),
+    item.material,
+    item.mercariDescription,
+    item.primaryImageUrl,
+    formatNumber(item.imageCount),
     item.status,
     formatNumber(item.initialPrice),
     item.dateListed,
@@ -207,6 +241,18 @@ export function mapOrderToRow(order: Omit<Order, "rowNumber">): string[] {
     formatNumber(order.shippingCost),
     formatNumber(order.totalCost),
     order.status,
+  ];
+}
+
+export function mapPhotoToRow(photo: Omit<Photo, "rowNumber">): string[] {
+  return [
+    photo.photoId,
+    photo.sku,
+    photo.objectPath,
+    photo.publicUrl,
+    formatNumber(photo.sortOrder),
+    formatBoolean(photo.isPrimary),
+    photo.uploadedAt,
   ];
 }
 
@@ -246,6 +292,11 @@ export function assertOrderHeaders(headers: string[]): Map<string, number> {
 
 export function assertAnalyticsHeaders(headers: string[]): Map<string, number> {
   validateHeaders(headers, ANALYTICS_COLUMNS, "Analytics");
+  return buildHeaderIndex(headers);
+}
+
+export function assertPhotoHeaders(headers: string[]): Map<string, number> {
+  validateHeaders(headers, PHOTO_COLUMNS, "Photos");
   return buildHeaderIndex(headers);
 }
 

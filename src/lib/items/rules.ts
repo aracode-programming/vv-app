@@ -1,5 +1,6 @@
 import type { ItemInput } from "@/lib/sheets/types";
 import {
+  MERCARI_DESCRIPTION,
   DEFAULT_ERA,
   DEFAULT_SIZE,
 } from "@/lib/items/templates";
@@ -205,6 +206,24 @@ export function buildItemInputFromForm(
       formData.get("size")!.toString().trim()
         ? formData.get("size")!.toString().trim()
         : DEFAULT_SIZE,
+    shoulderWidth: parseOptionalNumber(formData.get("shoulderWidth")),
+    chestWidth: parseOptionalNumber(formData.get("chestWidth")),
+    sleeveLength: parseOptionalNumber(formData.get("sleeveLength")),
+    bodyLength: parseOptionalNumber(formData.get("bodyLength")),
+    material:
+      typeof formData.get("material") === "string"
+        ? formData.get("material")!.toString().trim()
+        : "",
+    mercariDescription:
+      typeof formData.get("mercariDescription") === "string" &&
+      formData.get("mercariDescription")!.toString().trim()
+        ? formData.get("mercariDescription")!.toString().trim()
+        : MERCARI_DESCRIPTION,
+    primaryImageUrl:
+      typeof formData.get("primaryImageUrl") === "string"
+        ? formData.get("primaryImageUrl")!.toString().trim()
+        : "",
+    imageCount: parseOptionalNumber(formData.get("imageCount")),
     status,
     initialPrice: parseOptionalNumber(formData.get("initialPrice")),
     dateListed,

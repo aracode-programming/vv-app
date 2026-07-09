@@ -2,6 +2,8 @@ export {
   checkSheetsConnection,
   createItem,
   createOrder,
+  createPhoto,
+  deletePhotoById,
   getAnalyticsByYearMonth,
   getAnalyticsRecords,
   getExchangeAlertItems,
@@ -10,6 +12,8 @@ export {
   getLatestAnalytics,
   getOrderByEventId,
   getOrders,
+  getPhotos,
+  getPhotosBySku,
   updateItem,
   upsertAnalytics,
 } from "./index";
@@ -24,6 +28,8 @@ export type {
   OrderInput,
   OrderStatus,
   OrderType,
+  Photo,
+  PhotoInput,
   SheetsConnectionStatus,
 } from "./types";
 
@@ -31,5 +37,6 @@ export {
   ANALYTICS_COLUMNS,
   ITEM_COLUMNS,
   ORDER_COLUMNS,
+  PHOTO_COLUMNS,
   SHEET_TABS,
 } from "./config";

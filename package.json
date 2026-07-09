@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.110.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@google-cloud/storage": "^7.21.0",
     "@mui/icons-material": "^9.1.1",
     "@mui/material": "^9.1.2",
     "@mui/material-nextjs": "^9.1.1",

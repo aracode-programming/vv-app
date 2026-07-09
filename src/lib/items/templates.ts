@@ -12,13 +12,24 @@ export function buildItemNameFromCategory(
 export const DEFAULT_ERA = "90's-00's";
 export const DEFAULT_SIZE = "Free";
 
-export const MERCARI_DESCRIPTION = `閲覧いただき、誠に有難う御座います！
+export const MERCARI_DESCRIPTION_BODY_PLACEHOLDER =
+  "[商品説明(サイズ詳細、ブランド、素材、質感説明、商品説明など)]";
+
+export function buildMercariDescriptionTemplate(
+  body: string = MERCARI_DESCRIPTION_BODY_PLACEHOLDER,
+): string {
+  return `閲覧いただき、ありがとうございます！
 即購入大歓迎です！（^^）
+
+${body}
 
 値段交渉等も大歓迎です！！是非お値切りください（^^）
 
 質問等御座いましたら、コメント欄へ（^^）
-#古着屋アンダーモンキー ←他の商品もご覧くださいね！！`;
+#アンダーモンキー ←他の商品もご覧くださいね！！`;
+}
+
+export const MERCARI_DESCRIPTION = buildMercariDescriptionTemplate();
 
 export const CATEGORY_OPTIONS = [
   "トップス",
@@ -112,6 +123,7 @@ export function buildMercariCopyFields(item: {
   era: string;
   size: string;
   initialPrice: number | null;
+  mercariDescription: string;
 }): MercariCopyField[] {
   const fields: MercariCopyField[] = [
     { label: "商品名", value: item.itemName },
@@ -129,7 +141,10 @@ export function buildMercariCopyFields(item: {
     });
   }
 
-  fields.push({ label: "商品説明", value: MERCARI_DESCRIPTION });
+  fields.push({
+    label: "商品説明",
+    value: item.mercariDescription || MERCARI_DESCRIPTION,
+  });
 
   return fields.filter((field) => field.value.trim() !== "");
 }

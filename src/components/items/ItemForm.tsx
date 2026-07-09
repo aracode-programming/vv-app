@@ -11,10 +11,12 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 import {
   createItemAction,
@@ -22,7 +24,6 @@ import {
   type ItemActionState,
 } from "@/app/items/actions";
 import ColorSwatch from "@/components/items/ColorSwatch";
-import MercariDescriptionPanel from "@/components/items/MercariDescriptionPanel";
 import {
   getDefaultCostItem,
   getTodayDateString,
@@ -34,8 +35,14 @@ import {
   COLOR_OPTIONS,
   DEFAULT_ERA,
   DEFAULT_SIZE,
+  MERCARI_DESCRIPTION,
 } from "@/lib/items/templates";
-import type { Item, Order } from "@/lib/sheets/types";
+import {
+  DESCRIPTION_TONE_LABELS,
+  DESCRIPTION_TONE_OPTIONS,
+  type DescriptionTone,
+} from "@/lib/ai/description-style";
+import type { Item, Order, Photo } from "@/lib/sheets/types";
 
 type ItemFormProps = {
   mode: "create" | "edit";
@@ -43,6 +50,7 @@ type ItemFormProps = {
   existingItemCount?: number;
   nextSku?: string;
   orders?: Order[];
+  photos?: Photo[];
 };
 
 const initialState: ItemActionState = {};
@@ -60,6 +68,7 @@ export default function ItemForm({
   existingItemCount = 0,
   nextSku,
   orders = [],
+  photos = [],
 }: ItemFormProps) {
   const autoNameSku = mode === "create" ? nextSku ?? "" : item?.sku ?? "";
   const action =
@@ -85,13 +94,194 @@ export default function ItemForm({
   const [aiReasoning, setAiReasoning] = useState("");
   const [aiError, setAiError] = useState("");
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [uploadedPhotos, setUploadedPhotos] = useState<Photo[]>(photos);
+  const [uploadError, setUploadError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [mercariDescription, setMercariDescription] = useState(
+    item?.mercariDescription || MERCARI_DESCRIPTION,
+  );
+  const [descriptionTone, setDescriptionTone] =
+    useState<DescriptionTone>("polite");
 
   const brandRef = useRef<HTMLInputElement>(null);
   const costRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const shoulderWidthRef = useRef<HTMLInputElement>(null);
+  const chestWidthRef = useRef<HTMLInputElement>(null);
+  const sleeveLengthRef = useRef<HTMLInputElement>(null);
+  const bodyLengthRef = useRef<HTMLInputElement>(null);
+  const materialRef = useRef<HTMLInputElement>(null);
+  const eraRef = useRef<HTMLInputElement>(null);
 
   const sortedOrders = [...orders].sort((a, b) =>
     b.eventDate.localeCompare(a.eventDate),
   );
+  const activeSku = mode === "create" ? (nextSku ?? "") : (item?.sku ?? "");
+  const primaryPhoto = uploadedPhotos.find((photo) => photo.isPrimary) ?? uploadedPhotos[0];
+
+  const handleUploadPhotos = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !activeSku) return;
+    setUploadError("");
+    setIsUploading(true);
+
+    try {
+      const availableSlots = Math.max(0, 8 - uploadedPhotos.length);
+      const selectedFiles = Array.from(files).slice(0, availableSlots);
+
+      if (selectedFiles.length === 0) {
+        setUploadError("画像は最大8枚までです。");
+        return;
+      }
+
+      const createdPhotos: Photo[] = [];
+
+      for (const [index, file] of selectedFiles.entries()) {
+        const uploadRes = await fetch("/api/images/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sku: activeSku,
+            filename: file.name,
+            contentType: file.type,
+            size: file.size,
+          }),
+        });
+
+        const uploadData = (await uploadRes.json()) as {
+          ok: boolean;
+          error?: string;
+          uploadUrl?: string;
+          objectPath?: string;
+          publicUrl?: string;
+        };
+
+        if (!uploadRes.ok || !uploadData.ok || !uploadData.uploadUrl || !uploadData.objectPath || !uploadData.publicUrl) {
+          throw new Error(uploadData.error ?? "アップロードURLの取得に失敗しました。");
+        }
+
+        const putRes = await fetch(uploadData.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!putRes.ok) {
+          throw new Error(`画像アップロードに失敗しました: ${file.name}`);
+        }
+
+        const completeRes = await fetch("/api/images/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sku: activeSku,
+            objectPath: uploadData.objectPath,
+            publicUrl: uploadData.publicUrl,
+            isPrimary: uploadedPhotos.length === 0 && index === 0,
+          }),
+        });
+        const completeData = (await completeRes.json()) as {
+          ok: boolean;
+          error?: string;
+          photo?: Photo;
+        };
+        if (!completeRes.ok || !completeData.ok || !completeData.photo) {
+          throw new Error(completeData.error ?? "画像登録に失敗しました。");
+        }
+
+        createdPhotos.push(completeData.photo);
+      }
+
+      setUploadedPhotos((prev) =>
+        [...prev, ...createdPhotos].sort((a, b) => a.sortOrder - b.sortOrder),
+      );
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "画像のアップロードに失敗しました。",
+      );
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleDeletePhoto = async (photo: Photo) => {
+    setUploadError("");
+    try {
+      const response = await fetch(`/api/images/${encodeURIComponent(photo.photoId)}`, {
+        method: "DELETE",
+      });
+      const data = (await response.json()) as { ok: boolean; error?: string };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error ?? "画像の削除に失敗しました。");
+      }
+
+      setUploadedPhotos((prev) => prev.filter((itemPhoto) => itemPhoto.photoId !== photo.photoId));
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "画像の削除に失敗しました。",
+      );
+    }
+  };
+
+  const handleGenerateDescription = async () => {
+    setAiError("");
+    setIsGeneratingDescription(true);
+    try {
+      if (!itemName.trim()) {
+        setAiError("商品名を入力してから説明文生成を実行してください。");
+        return;
+      }
+      if (!color.trim()) {
+        setAiError("色味を選択してから説明文生成を実行してください。");
+        return;
+      }
+
+      const response = await fetch("/api/ai/generate-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemName,
+          brand: brandRef.current?.value ?? "",
+          category,
+          color,
+          era: eraRef.current?.value ?? "",
+          shoulderWidth: shoulderWidthRef.current?.value
+            ? Number(shoulderWidthRef.current.value)
+            : null,
+          chestWidth: chestWidthRef.current?.value
+            ? Number(chestWidthRef.current.value)
+            : null,
+          sleeveLength: sleeveLengthRef.current?.value
+            ? Number(sleeveLengthRef.current.value)
+            : null,
+          bodyLength: bodyLengthRef.current?.value
+            ? Number(bodyLengthRef.current.value)
+            : null,
+          material: materialRef.current?.value ?? "",
+          imageUrls: uploadedPhotos.map((photo) => photo.publicUrl).slice(0, 4),
+          tone: descriptionTone,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        ok: boolean;
+        error?: string;
+        fullDescription?: string;
+      };
+      if (!response.ok || !data.ok || !data.fullDescription) {
+        setAiError(data.error ?? "AI説明文の生成に失敗しました。");
+        return;
+      }
+
+      setMercariDescription(data.fullDescription);
+    } catch {
+      setAiError("AI説明文の生成中に通信エラーが発生しました。");
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
 
   useEffect(() => {
     if (mode === "create" && !itemNameTouched) {
@@ -172,6 +362,16 @@ export default function ItemForm({
           {state.error}
         </Alert>
       ) : null}
+      <input
+        type="hidden"
+        name="primaryImageUrl"
+        value={primaryPhoto?.publicUrl ?? item?.primaryImageUrl ?? ""}
+      />
+      <input
+        type="hidden"
+        name="imageCount"
+        value={String(uploadedPhotos.length)}
+      />
 
       <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }} gutterBottom>
@@ -325,6 +525,7 @@ export default function ItemForm({
             label="年代"
             fullWidth
             defaultValue={item?.era || DEFAULT_ERA}
+            inputRef={eraRef}
             sx={fieldSx}
             slotProps={{ inputLabel: { shrink: true } }}
             helperText="VV指定: 90's-00's"
@@ -360,8 +561,225 @@ export default function ItemForm({
           />
         </Box>
       </Paper>
+      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }} gutterBottom>
+          商品画像（最大8枚）
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          先頭画像が一覧用サムネイルとして使用されます。容量は1枚5MBまでです。
+        </Typography>
 
-      <MercariDescriptionPanel />
+        {uploadError ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {uploadError}
+          </Alert>
+        ) : null}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={(event) => void handleUploadPhotos(event.target.files)}
+        />
+        <Button
+          type="button"
+          variant="outlined"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading || uploadedPhotos.length >= 8 || !activeSku}
+          sx={{ mb: 2 }}
+        >
+          {isUploading ? "アップロード中..." : "画像を追加"}
+        </Button>
+
+        {uploadedPhotos.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            画像はまだ登録されていません。
+          </Typography>
+        ) : (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "repeat(2, minmax(0, 1fr))",
+                sm: "repeat(3, minmax(0, 1fr))",
+                md: "repeat(4, minmax(0, 1fr))",
+              },
+              gap: 1.5,
+            }}
+          >
+            {uploadedPhotos
+              .slice()
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+              .map((photo, index) => (
+                <Box
+                  key={photo.photoId}
+                  sx={{
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    overflow: "hidden",
+                    bgcolor: "background.default",
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={photo.publicUrl}
+                    alt={`${activeSku} ${index + 1}`}
+                    sx={{
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.5,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      {index === 0 ? "サムネイル" : `${index + 1}枚目`}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      aria-label="画像を削除"
+                      onClick={() => void handleDeletePhoto(photo)}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
+              ))}
+          </Box>
+        )}
+      </Paper>
+      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }} gutterBottom>
+          採寸・素材（AI説明文用）
+        </Typography>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            gap: 2,
+          }}
+        >
+          <TextField
+            name="shoulderWidth"
+            label="肩幅 (cm)"
+            type="number"
+            fullWidth
+            defaultValue={item?.shoulderWidth ?? ""}
+            inputRef={shoulderWidthRef}
+            sx={fieldSx}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <TextField
+            name="chestWidth"
+            label="身幅 (cm)"
+            type="number"
+            fullWidth
+            defaultValue={item?.chestWidth ?? ""}
+            inputRef={chestWidthRef}
+            sx={fieldSx}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <TextField
+            name="sleeveLength"
+            label="袖丈 (cm)"
+            type="number"
+            fullWidth
+            defaultValue={item?.sleeveLength ?? ""}
+            inputRef={sleeveLengthRef}
+            sx={fieldSx}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <TextField
+            name="bodyLength"
+            label="着丈 (cm)"
+            type="number"
+            fullWidth
+            defaultValue={item?.bodyLength ?? ""}
+            inputRef={bodyLengthRef}
+            sx={fieldSx}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <TextField
+            name="material"
+            label="素材（自由記述）"
+            fullWidth
+            defaultValue={item?.material ?? ""}
+            inputRef={materialRef}
+            sx={{ ...fieldSx, gridColumn: { sm: "1 / -1" } }}
+            slotProps={{ inputLabel: { shrink: true } }}
+            helperText="例: コットン100%、ポリエステル混紡、デニム生地"
+          />
+          <Box
+            sx={{
+              gridColumn: { sm: "1 / -1" },
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 1.5,
+              alignItems: { sm: "center" },
+              mb: 1,
+            }}
+          >
+            <TextField
+              select
+              label="説明文の口調"
+              size="small"
+              value={descriptionTone}
+              onChange={(event) =>
+                setDescriptionTone(event.target.value as DescriptionTone)
+              }
+              sx={{ minWidth: { sm: 220 }, ...fieldSx }}
+              slotProps={{ inputLabel: { shrink: true } }}
+              helperText="丁寧は接客調・誇張表現を抑えた文体です"
+            >
+              {DESCRIPTION_TONE_OPTIONS.map((tone) => (
+                <MenuItem key={tone} value={tone}>
+                  {DESCRIPTION_TONE_LABELS[tone]}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Button
+              type="button"
+              variant="outlined"
+              size="small"
+              startIcon={
+                isGeneratingDescription ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <AutoAwesomeIcon />
+                )
+              }
+              onClick={handleGenerateDescription}
+              disabled={isGeneratingDescription || isPending}
+              sx={{ minHeight: 40, alignSelf: { xs: "stretch", sm: "auto" } }}
+            >
+              AIで説明文を生成
+            </Button>
+          </Box>
+          <TextField
+            name="mercariDescription"
+            label="メルカリ用 商品説明"
+            multiline
+            minRows={8}
+            fullWidth
+            value={mercariDescription}
+            onChange={(event) => setMercariDescription(event.target.value)}
+            sx={{ gridColumn: { sm: "1 / -1" } }}
+            slotProps={{ inputLabel: { shrink: true } }}
+            helperText="AI生成後に手動調整できます。保存すると商品データに保持されます。"
+          />
+        </Box>
+      </Paper>
 
       <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
         <Box

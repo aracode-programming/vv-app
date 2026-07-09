@@ -64,6 +64,7 @@ export default function ItemTable({ items, onCopy }: ItemTableProps) {
       <Table size="small">
         <TableHead>
           <TableRow>
+            <TableCell>画像</TableCell>
             <TableCell>SKU</TableCell>
             <TableCell>ブランド</TableCell>
             <TableCell>商品名</TableCell>
@@ -97,6 +98,28 @@ export default function ItemTable({ items, onCopy }: ItemTableProps) {
                     : undefined,
                 }}
               >
+                <TableCell sx={{ width: 68 }}>
+                  {item.primaryImageUrl ? (
+                    <Box
+                      component="img"
+                      src={item.primaryImageUrl}
+                      alt={`${item.sku} thumbnail`}
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 1,
+                        objectFit: "cover",
+                        border: 1,
+                        borderColor: "divider",
+                        display: "block",
+                      }}
+                    />
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      —
+                    </Typography>
+                  )}
+                </TableCell>
                 <TableCell sx={{ fontWeight: 500 }}>{item.sku}</TableCell>
                 <TableCell>
                   <CopyableCell

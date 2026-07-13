@@ -17,10 +17,15 @@ import { alpha } from "@mui/material/styles";
 import ColorSwatch from "@/components/items/ColorSwatch";
 import ItemStatusChip from "@/components/items/ItemStatusChip";
 import type { Item } from "@/lib/sheets/types";
+import {
+  formatCurrency,
+  formatProfitMarginPercent,
+} from "@/lib/format";
 
 type ItemTableProps = {
   items: Item[];
   onCopy: (label: string, value: string) => void;
+  showSoldMetrics?: boolean;
 };
 
 type CopyableCellProps = {
@@ -58,7 +63,11 @@ function CopyableCell({ label, value, onCopy, align = "left" }: CopyableCellProp
   );
 }
 
-export default function ItemTable({ items, onCopy }: ItemTableProps) {
+export default function ItemTable({
+  items,
+  onCopy,
+  showSoldMetrics = false,
+}: ItemTableProps) {
   return (
     <TableContainer component={Paper} variant="outlined">
       <Table size="small">
@@ -73,7 +82,15 @@ export default function ItemTable({ items, onCopy }: ItemTableProps) {
             <TableCell>年代</TableCell>
             <TableCell>サイズ</TableCell>
             <TableCell>状態</TableCell>
-            <TableCell align="right">初期価格</TableCell>
+            {showSoldMetrics ? (
+              <>
+                <TableCell align="right">売却価格</TableCell>
+                <TableCell align="right">純利益</TableCell>
+                <TableCell align="right">利益率</TableCell>
+              </>
+            ) : (
+              <TableCell align="right">初期価格</TableCell>
+            )}
             <TableCell align="center" width={48} />
           </TableRow>
         </TableHead>
@@ -87,6 +104,12 @@ export default function ItemTable({ items, onCopy }: ItemTableProps) {
 
             const priceValue =
               item.initialPrice !== null ? String(item.initialPrice) : "";
+            const soldPriceValue =
+              item.actualSoldPrice !== null ? String(item.actualSoldPrice) : "";
+            const profitMargin = formatProfitMarginPercent(
+              item.netProfit,
+              item.actualSoldPrice,
+            );
 
             return (
               <TableRow
@@ -168,14 +191,56 @@ export default function ItemTable({ items, onCopy }: ItemTableProps) {
                     ) : null}
                   </Box>
                 </TableCell>
-                <TableCell align="right">
-                  <CopyableCell
-                    label="価格"
-                    value={priceValue}
-                    onCopy={onCopy}
-                    align="right"
-                  />
-                </TableCell>
+                {showSoldMetrics ? (
+                  <>
+                    <TableCell align="right">
+                      <CopyableCell
+                        label="売却価格"
+                        value={soldPriceValue}
+                        onCopy={onCopy}
+                        align="right"
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                          color:
+                            item.netProfit !== null && item.netProfit < 0
+                              ? "error.main"
+                              : "success.main",
+                        }}
+                      >
+                        {formatCurrency(item.netProfit)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 700,
+                          color:
+                            item.netProfit !== null && item.netProfit < 0
+                              ? "error.main"
+                              : "text.primary",
+                        }}
+                        title="利益率 = 純利益 ÷ 売却価格"
+                      >
+                        {profitMargin}
+                      </Typography>
+                    </TableCell>
+                  </>
+                ) : (
+                  <TableCell align="right">
+                    <CopyableCell
+                      label="価格"
+                      value={priceValue}
+                      onCopy={onCopy}
+                      align="right"
+                    />
+                  </TableCell>
+                )}
                 <TableCell align="center">
                   <IconButton
                     component="a"

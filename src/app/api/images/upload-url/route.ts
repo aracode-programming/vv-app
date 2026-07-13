@@ -4,6 +4,7 @@ import {
   buildPublicImageUrl,
   createSignedUploadUrl,
 } from "@/lib/gcs/client";
+import { isAllowedImageMimeType, isHeicLikeFile } from "@/lib/images/utils";
 
 function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
 
     const sku = body.sku?.trim() ?? "";
     const filename = body.filename?.trim() ?? "";
-    const contentType = body.contentType?.trim() ?? "";
+    let contentType = body.contentType?.trim() ?? "";
     const size = body.size ?? 0;
 
     if (!sku) {
@@ -31,16 +32,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "ファイル名が必要です。" }, { status: 400 });
     }
 
-    if (!contentType.startsWith("image/")) {
+    // iOSのHEICは contentType が空になることがある
+    if (!contentType && isHeicLikeFile(filename, "")) {
+      contentType = "image/heic";
+    }
+
+    if (!isAllowedImageMimeType(contentType) && !isHeicLikeFile(filename, contentType)) {
       return NextResponse.json(
-        { error: "画像ファイルのみアップロードできます。" },
+        { error: "画像ファイル（JPEG/PNG/WebP/HEICなど）のみアップロードできます。" },
         { status: 400 },
       );
     }
 
-    if (size > 5 * 1024 * 1024) {
+    if (size > 8 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "画像は5MB以下にしてください。" },
+        { error: "画像は8MB以下にしてください。" },
         { status: 400 },
       );
     }
@@ -56,6 +62,7 @@ export async function POST(request: Request) {
       uploadUrl,
       objectPath,
       publicUrl,
+      contentType,
     });
   } catch (error) {
     console.error("image upload-url error:", error);

@@ -231,6 +231,21 @@ export function mapItemToRow(item: Omit<Item, "rowNumber">): string[] {
   ];
 }
 
+/** シート上のヘッダー順に合わせて行データを並べる（列順ずれによる採寸/素材の誤保存を防ぐ） */
+export function mapItemToHeaderAlignedRow(
+  item: Omit<Item, "rowNumber">,
+  headers: string[],
+): string[] {
+  const ordered = mapItemToRow(item);
+  const valueByColumn = new Map<string, string>();
+
+  ITEM_COLUMNS.forEach((column, index) => {
+    valueByColumn.set(column, ordered[index] ?? "");
+  });
+
+  return headers.map((header) => valueByColumn.get(header.trim()) ?? "");
+}
+
 export function mapOrderToRow(order: Omit<Order, "rowNumber">): string[] {
   return [
     order.eventId,

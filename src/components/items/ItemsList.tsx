@@ -366,6 +366,11 @@ export default function ItemsList({ items }: ItemsListProps) {
         <Typography component="span" variant="caption" sx={{ ml: 1 }}>
           ・各項目をタップ/クリックでメルカリ用にコピー
         </Typography>
+        {statusFilter === "売却済" ? (
+          <Typography component="span" variant="caption" sx={{ ml: 1 }}>
+            ・利益率 = 純利益 ÷ 売却価格
+          </Typography>
+        ) : null}
       </Typography>
 
       {filteredItems.length === 0 ? (
@@ -387,12 +392,21 @@ export default function ItemsList({ items }: ItemsListProps) {
         <>
           <Stack spacing={1.5} sx={{ display: { xs: "flex", md: "none" } }}>
             {filteredItems.map((item) => (
-              <ItemCard key={item.sku} item={item} onCopy={handleCopy} />
+              <ItemCard
+                key={item.sku}
+                item={item}
+                onCopy={handleCopy}
+                showSoldMetrics={statusFilter === "売却済"}
+              />
             ))}
           </Stack>
 
           <Box sx={{ display: { xs: "none", md: "block" } }}>
-            <ItemTable items={filteredItems} onCopy={handleCopy} />
+            <ItemTable
+              items={filteredItems}
+              onCopy={handleCopy}
+              showSoldMetrics={statusFilter === "売却済"}
+            />
           </Box>
         </>
       )}

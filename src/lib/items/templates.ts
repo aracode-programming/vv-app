@@ -5,7 +5,7 @@ export function buildItemNameFromCategory(
 ): string {
   const normalized = category.trim() || "アイテム";
   const normalizedSku = sku?.trim();
-  const skuSuffix = normalizedSku ? ` [${normalizedSku}]` : "";
+  const skuSuffix = normalizedSku ? ` [${normalizedSku.toUpperCase()}]` : "";
   return `00's vintage ${normalized} アーカイブ グランジ y2k パンク${skuSuffix}`;
 }
 

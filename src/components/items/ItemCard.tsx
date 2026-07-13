@@ -15,14 +15,22 @@ import CopyableField from "@/components/items/CopyableField";
 import ItemStatusChip from "@/components/items/ItemStatusChip";
 import { buildMercariCopyFields } from "@/lib/items/templates";
 import type { Item } from "@/lib/sheets/types";
-import { formatCurrency } from "@/lib/format";
+import {
+  formatCurrency,
+  formatProfitMarginPercent,
+} from "@/lib/format";
 
 type ItemCardProps = {
   item: Item;
   onCopy: (label: string, value: string) => void;
+  showSoldMetrics?: boolean;
 };
 
-export default function ItemCard({ item, onCopy }: ItemCardProps) {
+export default function ItemCard({
+  item,
+  onCopy,
+  showSoldMetrics = false,
+}: ItemCardProps) {
   const showAlert =
     item.exchangeAlert ||
     (item.status === "出品中" &&
@@ -30,6 +38,10 @@ export default function ItemCard({ item, onCopy }: ItemCardProps) {
       item.daysSinceListed >= 90);
 
   const copyFields = buildMercariCopyFields(item);
+  const profitMargin = formatProfitMarginPercent(
+    item.netProfit,
+    item.actualSoldPrice,
+  );
 
   return (
     <Card
@@ -66,7 +78,9 @@ export default function ItemCard({ item, onCopy }: ItemCardProps) {
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {formatCurrency(item.initialPrice)}
+              {showSoldMetrics
+                ? formatCurrency(item.actualSoldPrice)
+                : formatCurrency(item.initialPrice)}
             </Typography>
             <IconButton
               component={Link}
@@ -78,6 +92,54 @@ export default function ItemCard({ item, onCopy }: ItemCardProps) {
             </IconButton>
           </Box>
         </Box>
+
+        {showSoldMetrics ? (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 1,
+              mb: 1.5,
+              p: 1.25,
+              borderRadius: 1,
+              bgcolor: "action.hover",
+            }}
+          >
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                売却価格
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {formatCurrency(item.actualSoldPrice)}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                純利益
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  color:
+                    item.netProfit !== null && item.netProfit < 0
+                      ? "error.main"
+                      : "success.main",
+                }}
+              >
+                {formatCurrency(item.netProfit)}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                利益率
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                {profitMargin}
+              </Typography>
+            </Box>
+          </Box>
+        ) : null}
 
         <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
           タップでコピー（メルカリ出品用）

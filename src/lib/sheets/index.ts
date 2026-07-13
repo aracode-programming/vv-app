@@ -1,4 +1,4 @@
-import { ITEM_COLUMNS, PHOTO_COLUMNS, SHEET_TABS } from "./config";
+import { PHOTO_COLUMNS, SHEET_TABS } from "./config";
 import {
   appendSheetValues,
   buildRowRange,
@@ -13,7 +13,7 @@ import {
   assertOrderHeaders,
   assertPhotoHeaders,
   mapAnalyticsToRow,
-  mapItemToRow,
+  mapItemToHeaderAlignedRow,
   mapOrderToRow,
   mapPhotoToRow,
   mapRowToAnalytics,
@@ -96,7 +96,9 @@ export async function createItem(item: ItemInput): Promise<Item> {
   const { headers } = splitHeaderAndRows(values);
   assertItemHeaders(headers);
 
-  await appendSheetValues(SHEET_TABS.ITEMS, [mapItemToRow(item)]);
+  await appendSheetValues(SHEET_TABS.ITEMS, [
+    mapItemToHeaderAlignedRow(item, headers),
+  ]);
 
   const created = await getItemBySku(item.sku);
   if (!created) {
@@ -125,12 +127,23 @@ export async function updateItem(
     color: updates.color ?? existing.color,
     era: updates.era ?? existing.era,
     size: updates.size ?? existing.size,
-    shoulderWidth: updates.shoulderWidth ?? existing.shoulderWidth,
-    chestWidth: updates.chestWidth ?? existing.chestWidth,
-    sleeveLength: updates.sleeveLength ?? existing.sleeveLength,
-    bodyLength: updates.bodyLength ?? existing.bodyLength,
-    material: updates.material ?? existing.material,
-    mercariDescription: updates.mercariDescription ?? existing.mercariDescription,
+    shoulderWidth:
+      updates.shoulderWidth !== undefined
+        ? updates.shoulderWidth
+        : existing.shoulderWidth,
+    chestWidth:
+      updates.chestWidth !== undefined ? updates.chestWidth : existing.chestWidth,
+    sleeveLength:
+      updates.sleeveLength !== undefined
+        ? updates.sleeveLength
+        : existing.sleeveLength,
+    bodyLength:
+      updates.bodyLength !== undefined ? updates.bodyLength : existing.bodyLength,
+    material: updates.material !== undefined ? updates.material : existing.material,
+    mercariDescription:
+      updates.mercariDescription !== undefined
+        ? updates.mercariDescription
+        : existing.mercariDescription,
     primaryImageUrl: updates.primaryImageUrl ?? existing.primaryImageUrl,
     imageCount: updates.imageCount ?? existing.imageCount,
     status: updates.status ?? existing.status,
@@ -150,10 +163,14 @@ export async function updateItem(
     daysToSell: updates.daysToSell ?? existing.daysToSell,
   };
 
+  const values = await readSheetValues(SHEET_TABS.ITEMS);
+  const { headers } = splitHeaderAndRows(values);
+  assertItemHeaders(headers);
+
   await updateSheetValues(
     SHEET_TABS.ITEMS,
-    buildRowRange(SHEET_TABS.ITEMS, existing.rowNumber, ITEM_COLUMNS.length),
-    [mapItemToRow(nextItem)],
+    buildRowRange(SHEET_TABS.ITEMS, existing.rowNumber, Math.max(headers.length, 1)),
+    [mapItemToHeaderAlignedRow(nextItem, headers)],
   );
 
   const updated = await getItemBySku(sku);

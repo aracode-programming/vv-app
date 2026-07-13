@@ -31,3 +31,33 @@ export function formatYearMonth(value: string): string {
 
   return value;
 }
+
+/** 売却価格に対する純利益の利益率（%） */
+export function computeProfitMarginPercent(
+  netProfit: number | null | undefined,
+  soldPrice: number | null | undefined,
+): number | null {
+  if (
+    netProfit === null ||
+    netProfit === undefined ||
+    soldPrice === null ||
+    soldPrice === undefined ||
+    soldPrice <= 0
+  ) {
+    return null;
+  }
+
+  return Math.round((netProfit / soldPrice) * 1000) / 10;
+}
+
+export function formatProfitMarginPercent(
+  netProfit: number | null | undefined,
+  soldPrice: number | null | undefined,
+): string {
+  const margin = computeProfitMarginPercent(netProfit, soldPrice);
+  if (margin === null) {
+    return "—";
+  }
+
+  return `${margin.toLocaleString("ja-JP")}%`;
+}

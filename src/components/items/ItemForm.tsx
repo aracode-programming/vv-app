@@ -103,15 +103,24 @@ export default function ItemForm({
   );
   const [descriptionTone, setDescriptionTone] =
     useState<DescriptionTone>("polite");
+  const [shoulderWidth, setShoulderWidth] = useState(
+    item?.shoulderWidth?.toString() ?? "",
+  );
+  const [chestWidth, setChestWidth] = useState(
+    item?.chestWidth?.toString() ?? "",
+  );
+  const [sleeveLength, setSleeveLength] = useState(
+    item?.sleeveLength?.toString() ?? "",
+  );
+  const [bodyLength, setBodyLength] = useState(
+    item?.bodyLength?.toString() ?? "",
+  );
+  const [material, setMaterial] = useState(item?.material ?? "");
+  const [driveUrl, setDriveUrl] = useState("");
 
   const brandRef = useRef<HTMLInputElement>(null);
   const costRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const shoulderWidthRef = useRef<HTMLInputElement>(null);
-  const chestWidthRef = useRef<HTMLInputElement>(null);
-  const sleeveLengthRef = useRef<HTMLInputElement>(null);
-  const bodyLengthRef = useRef<HTMLInputElement>(null);
-  const materialRef = useRef<HTMLInputElement>(null);
   const eraRef = useRef<HTMLInputElement>(null);
 
   const sortedOrders = [...orders].sort((a, b) =>
@@ -119,6 +128,29 @@ export default function ItemForm({
   );
   const activeSku = mode === "create" ? (nextSku ?? "") : (item?.sku ?? "");
   const primaryPhoto = uploadedPhotos.find((photo) => photo.isPrimary) ?? uploadedPhotos[0];
+
+  const prepareUploadFile = async (file: File): Promise<File> => {
+    const lowerName = file.name.toLowerCase();
+    const isHeic =
+      lowerName.endsWith(".heic") ||
+      lowerName.endsWith(".heif") ||
+      file.type.toLowerCase().includes("heic") ||
+      file.type.toLowerCase().includes("heif");
+
+    if (!isHeic) {
+      return file;
+    }
+
+    const heic2any = (await import("heic2any")).default;
+    const converted = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: 0.9,
+    });
+    const blob = Array.isArray(converted) ? converted[0] : converted;
+    const jpegName = file.name.replace(/\.(heic|heif)$/i, ".jpg");
+    return new File([blob], jpegName, { type: "image/jpeg" });
+  };
 
   const handleUploadPhotos = async (files: FileList | null) => {
     if (!files || files.length === 0 || !activeSku) return;
@@ -136,14 +168,17 @@ export default function ItemForm({
 
       const createdPhotos: Photo[] = [];
 
-      for (const [index, file] of selectedFiles.entries()) {
+      for (const [index, originalFile] of selectedFiles.entries()) {
+        const file = await prepareUploadFile(originalFile);
+        const contentType = file.type || "image/jpeg";
+
         const uploadRes = await fetch("/api/images/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sku: activeSku,
             filename: file.name,
-            contentType: file.type,
+            contentType,
             size: file.size,
           }),
         });
@@ -154,15 +189,22 @@ export default function ItemForm({
           uploadUrl?: string;
           objectPath?: string;
           publicUrl?: string;
+          contentType?: string;
         };
 
-        if (!uploadRes.ok || !uploadData.ok || !uploadData.uploadUrl || !uploadData.objectPath || !uploadData.publicUrl) {
+        if (
+          !uploadRes.ok ||
+          !uploadData.ok ||
+          !uploadData.uploadUrl ||
+          !uploadData.objectPath ||
+          !uploadData.publicUrl
+        ) {
           throw new Error(uploadData.error ?? "アップロードURLの取得に失敗しました。");
         }
 
         const putRes = await fetch(uploadData.uploadUrl, {
           method: "PUT",
-          headers: { "Content-Type": file.type },
+          headers: { "Content-Type": uploadData.contentType || contentType },
           body: file,
         });
         if (!putRes.ok) {
@@ -203,6 +245,49 @@ export default function ItemForm({
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleImportFromDrive = async () => {
+    if (!activeSku) return;
+    setUploadError("");
+    setIsUploading(true);
+
+    try {
+      if (uploadedPhotos.length >= 8) {
+        setUploadError("画像は最大8枚までです。");
+        return;
+      }
+
+      const response = await fetch("/api/images/from-drive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sku: activeSku,
+          driveUrl,
+          isPrimary: uploadedPhotos.length === 0,
+        }),
+      });
+      const data = (await response.json()) as {
+        ok: boolean;
+        error?: string;
+        photo?: Photo;
+      };
+
+      if (!response.ok || !data.ok || !data.photo) {
+        throw new Error(data.error ?? "Driveからの取り込みに失敗しました。");
+      }
+
+      setUploadedPhotos((prev) =>
+        [...prev, data.photo!].sort((a, b) => a.sortOrder - b.sortOrder),
+      );
+      setDriveUrl("");
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "Driveからの取り込みに失敗しました。",
+      );
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -247,19 +332,11 @@ export default function ItemForm({
           category,
           color,
           era: eraRef.current?.value ?? "",
-          shoulderWidth: shoulderWidthRef.current?.value
-            ? Number(shoulderWidthRef.current.value)
-            : null,
-          chestWidth: chestWidthRef.current?.value
-            ? Number(chestWidthRef.current.value)
-            : null,
-          sleeveLength: sleeveLengthRef.current?.value
-            ? Number(sleeveLengthRef.current.value)
-            : null,
-          bodyLength: bodyLengthRef.current?.value
-            ? Number(bodyLengthRef.current.value)
-            : null,
-          material: materialRef.current?.value ?? "",
+          shoulderWidth: shoulderWidth ? Number(shoulderWidth) : null,
+          chestWidth: chestWidth ? Number(chestWidth) : null,
+          sleeveLength: sleeveLength ? Number(sleeveLength) : null,
+          bodyLength: bodyLength ? Number(bodyLength) : null,
+          material,
           imageUrls: uploadedPhotos.map((photo) => photo.publicUrl).slice(0, 4),
           tone: descriptionTone,
         }),
@@ -566,7 +643,7 @@ export default function ItemForm({
           商品画像（最大8枚）
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          先頭画像が一覧用サムネイルとして使用されます。容量は1枚5MBまでです。
+          先頭画像が一覧用サムネイルとして使用されます。JPEG/PNG/WebP/HEIC対応（HEICは自動でJPEG変換）。1枚8MBまで。
         </Typography>
 
         {uploadError ? (
@@ -578,20 +655,62 @@ export default function ItemForm({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif,image/heic,image/heif"
           multiple
           hidden
           onChange={(event) => void handleUploadPhotos(event.target.files)}
         />
-        <Button
-          type="button"
-          variant="outlined"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading || uploadedPhotos.length >= 8 || !activeSku}
-          sx={{ mb: 2 }}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            gap: 1.5,
+            mb: 2,
+            alignItems: { sm: "flex-start" },
+          }}
         >
-          {isUploading ? "アップロード中..." : "画像を追加"}
-        </Button>
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || uploadedPhotos.length >= 8 || !activeSku}
+          >
+            {isUploading ? "アップロード中..." : "端末から画像を追加"}
+          </Button>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "1fr auto" },
+            gap: 1.5,
+            mb: 2,
+          }}
+        >
+          <TextField
+            label="Googleドライブの共有リンク / ファイルID"
+            fullWidth
+            value={driveUrl}
+            onChange={(event) => setDriveUrl(event.target.value)}
+            sx={fieldSx}
+            slotProps={{ inputLabel: { shrink: true } }}
+            helperText="サービスアカウントに共有した画像、またはリンク共有された画像を取り込みます"
+          />
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={() => void handleImportFromDrive()}
+            disabled={
+              isUploading ||
+              uploadedPhotos.length >= 8 ||
+              !activeSku ||
+              !driveUrl.trim()
+            }
+            sx={{ minHeight: 48, whiteSpace: "nowrap" }}
+          >
+            Driveから追加
+          </Button>
+        </Box>
 
         {uploadedPhotos.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
@@ -675,8 +794,8 @@ export default function ItemForm({
             label="肩幅 (cm)"
             type="number"
             fullWidth
-            defaultValue={item?.shoulderWidth ?? ""}
-            inputRef={shoulderWidthRef}
+            value={shoulderWidth}
+            onChange={(event) => setShoulderWidth(event.target.value)}
             sx={fieldSx}
             slotProps={{ inputLabel: { shrink: true } }}
           />
@@ -685,8 +804,8 @@ export default function ItemForm({
             label="身幅 (cm)"
             type="number"
             fullWidth
-            defaultValue={item?.chestWidth ?? ""}
-            inputRef={chestWidthRef}
+            value={chestWidth}
+            onChange={(event) => setChestWidth(event.target.value)}
             sx={fieldSx}
             slotProps={{ inputLabel: { shrink: true } }}
           />
@@ -695,8 +814,8 @@ export default function ItemForm({
             label="袖丈 (cm)"
             type="number"
             fullWidth
-            defaultValue={item?.sleeveLength ?? ""}
-            inputRef={sleeveLengthRef}
+            value={sleeveLength}
+            onChange={(event) => setSleeveLength(event.target.value)}
             sx={fieldSx}
             slotProps={{ inputLabel: { shrink: true } }}
           />
@@ -705,8 +824,8 @@ export default function ItemForm({
             label="着丈 (cm)"
             type="number"
             fullWidth
-            defaultValue={item?.bodyLength ?? ""}
-            inputRef={bodyLengthRef}
+            value={bodyLength}
+            onChange={(event) => setBodyLength(event.target.value)}
             sx={fieldSx}
             slotProps={{ inputLabel: { shrink: true } }}
           />
@@ -714,8 +833,8 @@ export default function ItemForm({
             name="material"
             label="素材（自由記述）"
             fullWidth
-            defaultValue={item?.material ?? ""}
-            inputRef={materialRef}
+            value={material}
+            onChange={(event) => setMaterial(event.target.value)}
             sx={{ ...fieldSx, gridColumn: { sm: "1 / -1" } }}
             slotProps={{ inputLabel: { shrink: true } }}
             helperText="例: コットン100%、ポリエステル混紡、デニム生地"

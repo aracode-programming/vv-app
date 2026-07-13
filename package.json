@@ -17,6 +17,7 @@
     "@mui/material": "^9.1.2",
     "@mui/material-nextjs": "^9.1.1",
     "googleapis": "^173.0.0",
+    "heic2any": "^0.0.4",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",

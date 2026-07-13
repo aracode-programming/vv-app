@@ -47,6 +47,24 @@ export async function createSignedUploadUrl(params: {
   return url;
 }
 
+export async function uploadObjectBuffer(params: {
+  objectPath: string;
+  buffer: Buffer;
+  contentType: string;
+}): Promise<void> {
+  const bucketName = getGcsBucketName();
+  const storage = getStorageClient();
+  const file = storage.bucket(bucketName).file(params.objectPath);
+
+  await file.save(params.buffer, {
+    contentType: params.contentType,
+    resumable: false,
+    metadata: {
+      cacheControl: "public, max-age=31536000",
+    },
+  });
+}
+
 export async function deleteObject(objectPath: string): Promise<void> {
   const bucketName = getGcsBucketName();
   const storage = getStorageClient();

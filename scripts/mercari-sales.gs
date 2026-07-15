@@ -22,8 +22,13 @@ const COL = {
   SKU: 1,           // A
   STATUS: 18,       // R Status
   DATE_LISTED: 20,  // T Date_Listed
+  COST_ITEM: 23,    // W Cost_Item
+  SHIPPING_IN: 24,  // X Shipping_In_Per_Item
   SOLD_PRICE: 25,   // Y Actual_Sold_Price
-  FEE: 26,          // Z Fee（任意・10%概算）
+  FEE: 26,          // Z Fee
+  SHIPPING_OUT: 27, // AA Shipping_Out
+  PACKAGING: 28,    // AB Packaging
+  NET_PROFIT: 29,   // AC Net_Profit
   DATE_SOLD: 30,    // AD Date_Sold
   DAYS_TO_SELL: 31, // AE Days_to_Sell
 };
@@ -94,8 +99,22 @@ function processMercariSales() {
       sheet.getRange(rowIndex, COL.DATE_SOLD).setValue(dateSold);
 
       if (soldPrice !== null) {
+        const fee = Math.round(soldPrice * 0.1);
+        const costItem = toNumber(data[rowIndex - 1][COL.COST_ITEM - 1]);
+        const shippingIn = toNumber(data[rowIndex - 1][COL.SHIPPING_IN - 1]);
+        const shippingOut = toNumber(data[rowIndex - 1][COL.SHIPPING_OUT - 1]);
+        const packaging = toNumber(data[rowIndex - 1][COL.PACKAGING - 1]);
+        const netProfit =
+          soldPrice -
+          ((costItem || 0) +
+            (shippingIn || 0) +
+            fee +
+            (shippingOut || 0) +
+            (packaging || 0));
+
         sheet.getRange(rowIndex, COL.SOLD_PRICE).setValue(soldPrice);
-        sheet.getRange(rowIndex, COL.FEE).setValue(Math.round(soldPrice * 0.1));
+        sheet.getRange(rowIndex, COL.FEE).setValue(fee);
+        sheet.getRange(rowIndex, COL.NET_PROFIT).setValue(netProfit);
       }
 
       if (daysToSell !== null) {
@@ -182,6 +201,17 @@ function findRowBySku(data, targetSku) {
     }
   }
   return null;
+}
+
+function toNumber(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (value === null || value === undefined || value === '') {
+    return 0;
+  }
+  const n = Number(String(value).replace(/,/g, '').replace(/[¥￥]/g, '').trim());
+  return Number.isFinite(n) ? n : 0;
 }
 
 function calcDaysToSell(dateListedRaw, soldDate) {

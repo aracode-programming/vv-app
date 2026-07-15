@@ -91,12 +91,12 @@ export function parseRequiredString(
   return value.trim();
 }
 
-function computeNetProfit(values: {
+export function computeNetProfit(values: {
   actualSoldPrice: number | null;
   fee: number | null;
   shippingOut: number | null;
   packaging: number | null;
-  costItem: number;
+  costItem: number | null;
   shippingInPerItem: number | null;
 }): number | null {
   if (values.actualSoldPrice === null) {
@@ -104,13 +104,37 @@ function computeNetProfit(values: {
   }
 
   const costs =
-    values.costItem +
+    (values.costItem ?? 0) +
     (values.shippingInPerItem ?? 0) +
     (values.fee ?? 0) +
     (values.shippingOut ?? 0) +
     (values.packaging ?? 0);
 
   return values.actualSoldPrice - costs;
+}
+
+/** シートの Net_Profit が空でも、売却価格とコストから純利益を解決する */
+export function resolveNetProfit(item: {
+  netProfit: number | null;
+  actualSoldPrice: number | null;
+  fee: number | null;
+  shippingOut: number | null;
+  packaging: number | null;
+  costItem: number | null;
+  shippingInPerItem: number | null;
+}): number | null {
+  if (item.netProfit !== null) {
+    return item.netProfit;
+  }
+
+  return computeNetProfit({
+    actualSoldPrice: item.actualSoldPrice,
+    fee: item.fee,
+    shippingOut: item.shippingOut,
+    packaging: item.packaging,
+    costItem: item.costItem,
+    shippingInPerItem: item.shippingInPerItem,
+  });
 }
 
 function computeDaysToSell(

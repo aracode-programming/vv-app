@@ -14,6 +14,7 @@ import ColorSwatch from "@/components/items/ColorSwatch";
 import CopyableField from "@/components/items/CopyableField";
 import ItemStatusChip from "@/components/items/ItemStatusChip";
 import { buildMercariCopyFields } from "@/lib/items/templates";
+import { resolveNetProfit } from "@/lib/items/rules";
 import type { Item } from "@/lib/sheets/types";
 import {
   formatCurrency,
@@ -38,8 +39,9 @@ export default function ItemCard({
       item.daysSinceListed >= 90);
 
   const copyFields = buildMercariCopyFields(item);
+  const netProfit = resolveNetProfit(item);
   const profitMargin = formatProfitMarginPercent(
-    item.netProfit,
+    netProfit,
     item.actualSoldPrice,
   );
 
@@ -122,12 +124,12 @@ export default function ItemCard({
                 sx={{
                   fontWeight: 600,
                   color:
-                    item.netProfit !== null && item.netProfit < 0
+                    netProfit !== null && netProfit < 0
                       ? "error.main"
                       : "success.main",
                 }}
               >
-                {formatCurrency(item.netProfit)}
+                {formatCurrency(netProfit)}
               </Typography>
             </Box>
             <Box>

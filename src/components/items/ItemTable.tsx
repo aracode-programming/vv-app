@@ -16,6 +16,7 @@ import { alpha } from "@mui/material/styles";
 
 import ColorSwatch from "@/components/items/ColorSwatch";
 import ItemStatusChip from "@/components/items/ItemStatusChip";
+import { resolveNetProfit } from "@/lib/items/rules";
 import type { Item } from "@/lib/sheets/types";
 import {
   formatCurrency,
@@ -106,8 +107,9 @@ export default function ItemTable({
               item.initialPrice !== null ? String(item.initialPrice) : "";
             const soldPriceValue =
               item.actualSoldPrice !== null ? String(item.actualSoldPrice) : "";
+            const netProfit = resolveNetProfit(item);
             const profitMargin = formatProfitMarginPercent(
-              item.netProfit,
+              netProfit,
               item.actualSoldPrice,
             );
 
@@ -207,12 +209,12 @@ export default function ItemTable({
                         sx={{
                           fontWeight: 600,
                           color:
-                            item.netProfit !== null && item.netProfit < 0
+                            netProfit !== null && netProfit < 0
                               ? "error.main"
                               : "success.main",
                         }}
                       >
-                        {formatCurrency(item.netProfit)}
+                        {formatCurrency(netProfit)}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
@@ -221,7 +223,7 @@ export default function ItemTable({
                         sx={{
                           fontWeight: 700,
                           color:
-                            item.netProfit !== null && item.netProfit < 0
+                            netProfit !== null && netProfit < 0
                               ? "error.main"
                               : "text.primary",
                         }}

@@ -123,13 +123,14 @@ export function columnIndexToLetter(index: number): string {
   return column;
 }
 
+/** セル範囲のみ返す（シート名は updateSheetValues 側で付与する） */
 export function buildRowRange(
-  sheetName: SheetTabName,
+  _sheetName: SheetTabName,
   rowNumber: number,
   columnCount: number,
 ): string {
   const endColumn = columnIndexToLetter(columnCount);
-  return `'${sheetName}'!A${rowNumber}:${endColumn}${rowNumber}`;
+  return `A${rowNumber}:${endColumn}${rowNumber}`;
 }
 
 export { getSpreadsheetId };
